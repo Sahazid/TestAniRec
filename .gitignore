@@ -1,0 +1,16 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+.idea/
+
+# Local env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,28 @@
+workflows:
+  flutter-android:
+    name: AniRec Android APK Build
+    environment:
+      flutter: stable
+    scripts:
+      - flutter pub get
+      - flutter create --platforms=android .
+      - dart run flutter_launcher_icons
+      - |
+        python3 - <<'PY'
+        from pathlib import Path
+
+        p = Path("android/app/src/main/AndroidManifest.xml")
+        s = p.read_text()
+
+        permission = '    <uses-permission android:name="android.permission.INTERNET"/>'
+
+        if "android.permission.INTERNET" not in s:
+            s = s.replace(
+                '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
+                '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n' + permission
+            )
+            p.write_text(s)
+        PY
+      - flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk

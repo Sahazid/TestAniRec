@@ -1,0 +1,35 @@
+name: anirec
+version: 1.0.0+1
+publish_to: 'none'
+description: AniRec - AI powered anime recommendation app using Jikan API.
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  provider: ^6.1.2
+  cached_network_image: ^3.4.1
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.3.2
+  url_launcher: ^6.3.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/anirec_mockup.png
+    - assets/logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/logo.png
