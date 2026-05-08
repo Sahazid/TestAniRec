@@ -126,12 +126,13 @@ class LocalDatabaseService {
       'created_at': now,
     });
     final user = AppUser(
-       id: id,
-       username: normalizedEmail.split('@').first,
-       email: normalizedEmail,
-       role: role,
+      id: id,
+      username: normalizedEmail.split('@').first,
+      email: normalizedEmail,
+      role: role,
+      isBlocked: false,
       createdAt: DateTime.parse(now),
-);
+    );
     await setActiveUserId(user.id);
     return user;
   }
