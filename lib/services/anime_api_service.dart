@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/anime.dart';
+import '../models/anime_episode.dart';
 
 class AnimeApiService {
   static const String baseUrl = 'https://api.jikan.moe/v4';
@@ -39,6 +40,37 @@ class AnimeApiService {
 
   Future<List<Anime>> recommendationByKeyword(String keyword) async {
     return searchAnime(keyword, limit: 12);
+  }
+
+  Future<List<Anime>> seasonalBy(String season, int year, {int limit = 24}) async {
+    final uri = Uri.parse('$baseUrl/seasons/$year/$season?limit=$limit&sfw=true');
+    return _fetchList(uri, fallbackLimit: limit);
+  }
+
+  Future<List<AnimeEpisode>> animeEpisodes(int animeId) async {
+    final uri = Uri.parse('$baseUrl/anime/$animeId/episodes');
+    try {
+      final res = await http
+          .get(uri, headers: {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 12));
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+        final data = decoded['data'] as List<dynamic>? ?? [];
+        return data
+            .map((e) => AnimeEpisode.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {
+      // Keep a graceful fallback so "Watch" always has content.
+    }
+    return List.generate(
+      12,
+      (i) => AnimeEpisode(
+        malId: i + 1,
+        number: i + 1,
+        title: 'Episode ${i + 1}',
+      ),
+    );
   }
 
   Future<List<Anime>> _fetchList(Uri uri, {int fallbackLimit = 10}) async {

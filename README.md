@@ -10,15 +10,19 @@ AniRec is a modern anime recommendation app based on the UI concept you liked. I
 - Search endpoint used: `https://api.jikan.moe/v4/anime?q=naruto&sfw=true`
 
 ## Features included
-- Animated landing/home hero banner that changes top 10 anime every 1 second.
+- Animated landing/home hero banner that rotates top anime.
 - Anime title, genre chips, score and synopsis overlay on the hero banner.
 - Real anime API integration using Jikan.
-- Search by anime title, mood/keyword and genre.
-- Smart recommendation section based on saved user behavior/search keywords/watchlist.
-- Watchlist using local storage.
+- Smart search by title, genre and behavior keywords.
+- Search feedback showing searched term and result count.
+- Watchlist requires login and is saved per user account.
+- Local user authentication system: login, signup, forgot password.
+- User profile now shows real logged-in account data.
+- Working `View all` action from home sections.
+- Working admin panel with real stats (users, searches, watchlist items).
+- Anime detail page with trailer/source link.
+- Episode-wise watch page so users can open anime episodes directly.
 - Dark and light theme toggle.
-- Anime detail page with trailer / MyAnimeList link support.
-- Admin panel placeholder for future CMS/backend management.
 - Modern responsive UI inspired by the sample mockup.
 
 ## Run without Android Studio
@@ -44,5 +48,17 @@ APK location:
 build/app/outputs/flutter-apk/app-release.apk
 ```
 
+## Authentication and admin notes
+- Local database: SQLite (`sqflite`) is used to persist users, watchlist records, and search history.
+- Passwords are stored as hashes (SHA-256), not plain text.
+- Admin access is role-based.
+- Default admin rule in this build: signup/login with `admin@anirec.com` to open admin features.
+
+## Run
+```bash
+flutter pub get
+flutter run
+```
+
 ## Notes
-This is a ready starter source project, not a store-ready production backend. Jikan is public and rate-limited, so for production you should add Firebase/Supabase backend caching, user login, admin CMS and analytics.
+This is a production-style starter but still uses local storage for auth/data and public Jikan API. For full production deployment, consider moving auth, watchlists and admin data to a hosted backend (Firebase/Supabase/custom API) and add robust server-side authorization.

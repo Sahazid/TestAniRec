@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../models/anime.dart';
 import '../providers/app_state.dart';
 import '../widgets/anime_card.dart';
+import 'all_anime_screen.dart';
+import 'auth_screen.dart';
 import 'detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -109,6 +111,25 @@ class _TopHeader extends StatelessWidget {
 }
 
 class _HeroBanner extends StatelessWidget {
+  Future<void> _handleWatchlistTap(BuildContext context, AppState state, Anime anime) async {
+    var result = await state.toggleWatchlist(anime);
+    if (result == WatchlistActionResult.needsLogin) {
+      final loggedIn = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+      );
+      if (loggedIn == true) {
+        result = await state.toggleWatchlist(anime);
+      }
+    }
+    if (!context.mounted) return;
+    if (result == WatchlistActionResult.added) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added to watchlist.')));
+    } else if (result == WatchlistActionResult.removed) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Removed from watchlist.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -225,7 +246,7 @@ class _HeroBanner extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                           IconButton.filledTonal(
-                            onPressed: () => state.toggleWatchlist(anime),
+                            onPressed: () => _handleWatchlistTap(context, state, anime),
                             icon: Icon(state.isInWatchlist(anime.id) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
                           ),
                         ],
@@ -298,6 +319,15 @@ class _Section extends StatelessWidget {
   final List<Anime> items;
   const _Section({required this.title, required this.subtitle, required this.items});
 
+  Future<void> _openViewAll(BuildContext context, AppState state) async {
+    await state.setViewAllItems(items);
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AllAnimeScreen(title: title)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -316,7 +346,10 @@ class _Section extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(subtitle, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
                   ])),
-                  Text('View all', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
+                  InkWell(
+                    onTap: () => _openViewAll(context, context.read<AppState>()),
+                    child: Text('View all', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
+                  ),
                 ],
               ),
             ),

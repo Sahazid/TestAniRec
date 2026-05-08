@@ -2,12 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../widgets/anime_card.dart';
+import 'auth_screen.dart';
 
 class WatchlistScreen extends StatelessWidget {
   const WatchlistScreen({super.key});
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    if (state.currentUser == null) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline_rounded, size: 72),
+                const SizedBox(height: 16),
+                const Text('Login to access your watchlist', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 10),
+                FilledButton(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen())),
+                  child: const Text('Login / Signup'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final items = [...state.top, ...state.seasonal, ...state.recommendations].where((a) => state.watchlistIds.contains(a.id)).toSet().toList();
     return Scaffold(
       body: CustomScrollView(

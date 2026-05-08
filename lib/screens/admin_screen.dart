@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final user = state.currentUser;
+    if (user == null || !user.isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('AniRec Admin', style: TextStyle(fontWeight: FontWeight.w900))),
+        body: const Center(child: Text('Only admin can access this page.')),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('AniRec Admin', style: TextStyle(fontWeight: FontWeight.w900))),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
-        children: const [
-          _AdminTile(icon: Icons.cloud_sync_rounded, title: 'API Sync', subtitle: 'Connect Firebase/Supabase later to cache Jikan anime data.'),
-          _AdminTile(icon: Icons.movie_creation_rounded, title: 'Manage Anime', subtitle: 'Future feature: add custom featured anime, banners and keywords.'),
-          _AdminTile(icon: Icons.people_alt_rounded, title: 'Users', subtitle: 'Future feature: view user behavior and watchlists.'),
-          _AdminTile(icon: Icons.analytics_rounded, title: 'Analytics', subtitle: 'Future feature: trending searches and recommendation performance.'),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
+        children: [
+          _AdminTile(icon: Icons.people_alt_rounded, title: 'Total Users', subtitle: state.adminOverview['users'].toString()),
+          _AdminTile(icon: Icons.search_rounded, title: 'Total Searches', subtitle: state.adminOverview['searches'].toString()),
+          _AdminTile(icon: Icons.bookmark_rounded, title: 'Watchlist Items', subtitle: state.adminOverview['watchlistItems'].toString()),
+          const SizedBox(height: 12),
+          const Text('Latest Registered Users', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          ...state.adminUsers.map((u) => Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: const Icon(Icons.person_rounded),
+                  title: Text(u.email),
+                  subtitle: Text('Role: ${u.role}'),
+                ),
+              )),
         ],
       ),
     );

@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/anime.dart';
 import '../providers/app_state.dart';
+import 'auth_screen.dart';
+import 'watch_anime_screen.dart';
 
 class DetailScreen extends StatelessWidget {
   final Anime anime;
@@ -24,7 +26,7 @@ class DetailScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: IconButton.filledTonal(
-                  onPressed: () => state.toggleWatchlist(anime),
+                  onPressed: () => _toggleWatchlist(context, state),
                   icon: Icon(inList ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
                 ),
               ),
@@ -98,9 +100,18 @@ class DetailScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: () => state.toggleWatchlist(anime),
+                      onPressed: () => _toggleWatchlist(context, state),
                       icon: Icon(inList ? Icons.check_rounded : Icons.add_rounded),
                       label: Text(inList ? 'Saved in Watchlist' : 'Add to Watchlist'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WatchAnimeScreen(anime: anime))),
+                      icon: const Icon(Icons.tv_rounded),
+                      label: const Text('Watch by Episodes'),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -124,6 +135,25 @@ class DetailScreen extends StatelessWidget {
   Future<void> _open(String url) async {
     final uri = Uri.tryParse(url);
     if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _toggleWatchlist(BuildContext context, AppState state) async {
+    var result = await state.toggleWatchlist(anime);
+    if (result == WatchlistActionResult.needsLogin) {
+      final loggedIn = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+      );
+      if (loggedIn == true) {
+        result = await state.toggleWatchlist(anime);
+      }
+    }
+    if (!context.mounted) return;
+    if (result == WatchlistActionResult.added) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added to watchlist.')));
+    } else if (result == WatchlistActionResult.removed) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Removed from watchlist.')));
+    }
   }
 }
 

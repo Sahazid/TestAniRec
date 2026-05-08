@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import 'admin_screen.dart';
+import 'auth_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final user = state.currentUser;
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 16, 18, 110),
@@ -32,14 +34,32 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Otaku Level 24', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                    Text(user == null ? 'Guest User' : user.email, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 4),
-                    Text('${state.watchlistIds.length} saved anime • AI profile active', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                    Text(
+                      user == null
+                          ? 'Login to sync watchlist and profile'
+                          : '${state.watchlistIds.length} saved anime • ${user.role.toUpperCase()}',
+                      style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                    ),
                   ]),
                 ),
               ],
             ),
           ),
+          if (user == null) ...[
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen())),
+              child: const Text('Login / Signup'),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => state.logout(),
+              child: const Text('Logout'),
+            ),
+          ],
           const SizedBox(height: 22),
           _ModernTile(
             icon: state.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
@@ -60,7 +80,7 @@ class ProfileScreen extends StatelessWidget {
           _ModernTile(
             icon: Icons.admin_panel_settings_rounded,
             title: 'Admin Panel',
-            subtitle: 'Starter admin area for future backend/CMS.',
+            subtitle: user?.isAdmin == true ? 'Manage users, searches and watchlists.' : 'Admin only',
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminScreen())),
           ),
         ],

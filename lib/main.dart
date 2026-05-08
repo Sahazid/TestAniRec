@@ -7,12 +7,13 @@ import 'screens/search_screen.dart';
 import 'screens/watchlist_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/anime_api_service.dart';
+import 'services/local_database_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
-      create: (_) => AppState(AnimeApiService())..init(),
+      create: (_) => AppState(AnimeApiService(), LocalDatabaseService())..init(),
       child: const AniRecApp(),
     ),
   );

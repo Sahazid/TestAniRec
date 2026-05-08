@@ -75,10 +75,26 @@ class _SearchScreenState extends State<SearchScreen> {
                       },
                     )).toList(),
                   ),
+                  const SizedBox(height: 14),
+                  if (state.lastSearchQuery != null)
+                    Text(
+                      'Searched: "${state.lastSearchQuery}" • ${state.lastSearchCount} results',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
+          if (!state.loading && state.lastSearchQuery != null && state.searchResults.isEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 18),
+                child: Text('No anime found for this search keyword. Try another genre or title.'),
+              ),
+            ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 24, 18, 110),
             sliver: SliverGrid.builder(
