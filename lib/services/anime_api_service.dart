@@ -56,9 +56,17 @@ class AnimeApiService {
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body) as Map<String, dynamic>;
         final data = decoded['data'] as List<dynamic>? ?? [];
-        return data
-            .map((e) => AnimeEpisode.fromJson(e as Map<String, dynamic>))
-            .toList();
+        return data.asMap().entries.map((entry) {
+          final i = entry.key;
+          final raw = entry.value as Map<String, dynamic>;
+          return AnimeEpisode(
+            malId: raw['mal_id'] ?? (i + 1),
+            number: i + 1,
+            title: (raw['title'] ?? 'Episode ${i + 1}').toString(),
+            forumUrl: raw['forum_url']?.toString(),
+            streamUrl: _demoStreamForEpisode(i + 1),
+          );
+        }).toList();
       }
     } catch (_) {
       // Keep a graceful fallback so "Watch" always has content.
@@ -69,8 +77,19 @@ class AnimeApiService {
         malId: i + 1,
         number: i + 1,
         title: 'Episode ${i + 1}',
+        streamUrl: _demoStreamForEpisode(i + 1),
       ),
     );
+  }
+
+  String _demoStreamForEpisode(int episode) {
+    const streams = [
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    ];
+    return streams[(episode - 1) % streams.length];
   }
 
   Future<List<Anime>> _fetchList(Uri uri, {int fallbackLimit = 10}) async {
