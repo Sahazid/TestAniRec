@@ -110,7 +110,20 @@ class _TopHeader extends StatelessWidget {
   }
 }
 
-class _HeroBanner extends StatelessWidget {
+class _HeroBanner extends StatefulWidget {
+  @override
+  State<_HeroBanner> createState() => _HeroBannerState();
+}
+
+class _HeroBannerState extends State<_HeroBanner> {
+  final PageController _controller = PageController(viewportFraction: 1);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleWatchlistTap(BuildContext context, AppState state, Anime anime) async {
     var result = await state.toggleWatchlist(anime);
     if (result == WatchlistActionResult.needsLogin) {
@@ -141,122 +154,146 @@ class _HeroBanner extends StatelessWidget {
       );
     }
 
-    final anime = state.top[state.heroIndex];
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DetailScreen(anime: anime))),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 650),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(scale: Tween<double>(begin: .98, end: 1).animate(animation), child: child),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_controller.hasClients || state.top.isEmpty) return;
+      if (_controller.page?.round() == state.heroIndex) return;
+      _controller.animateToPage(
+        state.heroIndex,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOutCubic,
+      );
+    });
+    return SizedBox(
+      height: 390,
+      child: PageView.builder(
+        controller: _controller,
+        itemCount: state.top.length,
+        onPageChanged: state.setHeroIndex,
+        itemBuilder: (_, i) => _HeroSlide(
+          anime: state.top[i],
+          index: i,
+          total: state.top.length,
+          isSaved: state.isInWatchlist(state.top[i].id),
+          onDetails: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DetailScreen(anime: state.top[i]))),
+          onToggleSave: () => _handleWatchlistTap(context, state, state.top[i]),
         ),
-        child: Container(
-          key: ValueKey(anime.id),
-          height: 390,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(34),
-            boxShadow: [BoxShadow(color: const Color(0xFF8B5CF6).withOpacity(.30), blurRadius: 34, offset: const Offset(0, 18))],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(34),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CachedNetworkImage(
-                  imageUrl: anime.largeImageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => const ColoredBox(color: Color(0xFF12162C), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                  errorWidget: (_, __, ___) => const ColoredBox(color: Color(0xFF12162C), child: Icon(Icons.image_not_supported_outlined)),
+      ),
+    );
+  }
+}
+
+class _HeroSlide extends StatelessWidget {
+  final Anime anime;
+  final int index;
+  final int total;
+  final bool isSaved;
+  final VoidCallback onDetails;
+  final VoidCallback onToggleSave;
+
+  const _HeroSlide({
+    required this.anime,
+    required this.index,
+    required this.total,
+    required this.isSaved,
+    required this.onDetails,
+    required this.onToggleSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(34),
+        boxShadow: [BoxShadow(color: const Color(0xFF8B5CF6).withOpacity(.30), blurRadius: 34, offset: const Offset(0, 18))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(34),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: anime.largeImageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => const ColoredBox(color: Color(0xFF12162C), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+              errorWidget: (_, __, ___) => const ColoredBox(color: Color(0xFF12162C), child: Icon(Icons.image_not_supported_outlined)),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withOpacity(.12), Colors.black.withOpacity(.28), Colors.black.withOpacity(.92)],
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.black.withOpacity(.12), Colors.black.withOpacity(.28), Colors.black.withOpacity(.92)],
-                    ),
-                  ),
+              ),
+            ),
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(.45),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: Colors.white.withOpacity(.16)),
                 ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(.45),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: Colors.white.withOpacity(.16)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF7A18), size: 18),
-                        const SizedBox(width: 6),
-                        Text('Top ${state.heroIndex + 1}/10 • changes every 5s', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
-                      ],
-                    ),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF7A18), size: 18),
+                    const SizedBox(width: 6),
+                    Text('Top ${index + 1}/$total • auto + swipe', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                  ],
                 ),
-                Positioned(
-                  right: -8,
-                  bottom: 72,
-                  child: Container(
-                    height: 88,
-                    width: 88,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF8B5CF6).withOpacity(.18)),
-                  ),
-                ),
-                Positioned(
-                  left: 18,
-                  right: 18,
-                  bottom: 22,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          _MiniPill(icon: Icons.star_rounded, text: anime.score.toStringAsFixed(1), color: const Color(0xFFFFC857)),
-                          const SizedBox(width: 8),
-                          _MiniPill(icon: Icons.calendar_month_rounded, text: anime.year?.toString() ?? 'Anime', color: const Color(0xFF38BDF8)),
-                        ],
+                      _MiniPill(icon: Icons.star_rounded, text: anime.score.toStringAsFixed(1), color: const Color(0xFFFFC857)),
+                      const SizedBox(width: 8),
+                      _MiniPill(icon: Icons.calendar_month_rounded, text: anime.year?.toString() ?? 'Anime', color: const Color(0xFF38BDF8)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(anime.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, height: 1.02)),
+                  const SizedBox(height: 9),
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: anime.genres.take(4).map((g) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(.13), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(.12))),
+                      child: Text(g, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                    )).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(anime.synopsis, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, height: 1.4)),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      FilledButton.icon(
+                        onPressed: onDetails,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('View Details'),
                       ),
-                      const SizedBox(height: 12),
-                      Text(anime.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, height: 1.02)),
-                      const SizedBox(height: 9),
-                      Wrap(
-                        spacing: 7,
-                        runSpacing: 7,
-                        children: anime.genres.take(4).map((g) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(color: Colors.white.withOpacity(.13), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(.12))),
-                          child: Text(g, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                        )).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(anime.synopsis, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, height: 1.4)),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          FilledButton.icon(
-                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DetailScreen(anime: anime))),
-                            icon: const Icon(Icons.play_arrow_rounded),
-                            label: const Text('View Details'),
-                          ),
-                          const SizedBox(width: 10),
-                          IconButton.filledTonal(
-                            onPressed: () => _handleWatchlistTap(context, state, anime),
-                            icon: Icon(state.isInWatchlist(anime.id) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
-                          ),
-                        ],
+                      const SizedBox(width: 10),
+                      IconButton.filledTonal(
+                        onPressed: onToggleSave,
+                        icon: Icon(isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

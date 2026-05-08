@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import 'admin_screen.dart';
 import 'auth_screen.dart';
+import 'behavior_screen.dart';
+import 'profile_edit_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -23,28 +26,34 @@ class ProfileScreen extends StatelessWidget {
               gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFF6B00), Color(0xFF8B5CF6), Color(0xFF111827)]),
               boxShadow: [BoxShadow(color: const Color(0xFF8B5CF6).withOpacity(.24), blurRadius: 32, offset: const Offset(0, 16))],
             ),
-            child: Row(
-              children: [
-                Container(
-                  height: 72,
-                  width: 72,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(.18), border: Border.all(color: Colors.white.withOpacity(.25))),
-                  child: const Icon(Icons.person_rounded, size: 38, color: Colors.white),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(user == null ? 'Guest User' : user.email, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 4),
-                    Text(
-                      user == null
-                          ? 'Login to sync watchlist and profile'
-                          : '${state.watchlistIds.length} saved anime • ${user.role.toUpperCase()}',
-                      style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
-                    ),
-                  ]),
-                ),
-              ],
+            child: InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: user == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileEditScreen())),
+              child: Row(
+                children: [
+                  Container(
+                    height: 72,
+                    width: 72,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(.18), border: Border.all(color: Colors.white.withOpacity(.25))),
+                    child: user?.profileImagePath == null
+                        ? const Icon(Icons.person_rounded, size: 38, color: Colors.white)
+                        : ClipOval(child: Image.file(File(user!.profileImagePath!), fit: BoxFit.cover)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(user == null ? 'Guest User' : user.username, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 4),
+                      Text(
+                        user == null
+                            ? 'Login to sync watchlist and profile'
+                            : '${state.watchlistIds.length} saved anime • Joined ${user.createdAt.toLocal().toString().split(".").first}',
+                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
+                    ]),
+                  ),
+                ],
+              ),
             ),
           ),
           if (user == null) ...[
@@ -67,22 +76,20 @@ class ProfileScreen extends StatelessWidget {
             subtitle: state.isDark ? 'Dark futuristic anime mode enabled' : 'Clean light mode enabled',
             trailing: Switch(value: state.isDark, onChanged: (_) => state.toggleTheme()),
           ),
-          _ModernTile(
-            icon: Icons.psychology_rounded,
-            title: 'AI Behavior Learning',
-            subtitle: state.behaviorKeywords.isEmpty ? 'Search and save anime to train recommendations.' : state.behaviorKeywords.join(', '),
-          ),
-          _ModernTile(
-            icon: Icons.bookmark_rounded,
-            title: 'Watchlist',
-            subtitle: 'Your saved anime helps AniRec improve suggestions.',
-          ),
-          _ModernTile(
-            icon: Icons.admin_panel_settings_rounded,
-            title: 'Admin Panel',
-            subtitle: user?.isAdmin == true ? 'Manage users, searches and watchlists.' : 'Admin only',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminScreen())),
-          ),
+          if (user != null)
+            _ModernTile(
+              icon: Icons.psychology_rounded,
+              title: 'AI Behavior Learning',
+              subtitle: state.behaviorKeywords.isEmpty ? 'Search and save anime to train recommendations.' : state.behaviorKeywords.join(', '),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BehaviorScreen())),
+            ),
+          if (user?.isAdmin == true)
+            _ModernTile(
+              icon: Icons.admin_panel_settings_rounded,
+              title: 'Admin Panel',
+              subtitle: 'Manage users, anime and app stats',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminScreen())),
+            ),
         ],
       ),
     );

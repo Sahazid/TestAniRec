@@ -68,7 +68,28 @@ class WatchlistScreen extends StatelessWidget {
               sliver: SliverGrid.builder(
                 itemCount: items.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .58, crossAxisSpacing: 14, mainAxisSpacing: 18),
-                itemBuilder: (_, i) => AnimeCard(anime: items[i], width: double.infinity),
+                itemBuilder: (_, i) {
+                  final anime = items[i];
+                  return Stack(
+                    children: [
+                      AnimeCard(anime: anime, width: double.infinity),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: IconButton.filled(
+                          onPressed: () async {
+                            await state.toggleWatchlist(anime);
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Removed from saved list.')),
+                            );
+                          },
+                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
         ],

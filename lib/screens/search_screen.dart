@@ -63,17 +63,24 @@ class _SearchScreenState extends State<SearchScreen> {
                   const SizedBox(height: 22),
                   const Text('Special Keywords', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: state.smartKeywords.map((k) => ActionChip(
-                      avatar: const Icon(Icons.bolt_rounded, size: 16),
-                      label: Text(k),
-                      onPressed: () {
-                        controller.text = k;
-                        state.search(k);
+                  SizedBox(
+                    height: 44,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: state.smartKeywords.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (_, i) {
+                        final k = state.smartKeywords[i];
+                        return ActionChip(
+                          avatar: const Icon(Icons.bolt_rounded, size: 16),
+                          label: Text(k),
+                          onPressed: () {
+                            controller.text = k;
+                            state.search(k);
+                          },
+                        );
                       },
-                    )).toList(),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   if (state.lastSearchQuery != null)

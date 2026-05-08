@@ -19,9 +19,12 @@ class LocalDatabaseService {
         await db.execute('''
           CREATE TABLE users(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'user',
+            profile_image_path TEXT,
+            is_blocked INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
           )
         ''');
@@ -47,9 +50,57 @@ class LocalDatabaseService {
             value TEXT NOT NULL
           )
         ''');
+        await db.execute('''
+          CREATE TABLE custom_anime(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            image_url TEXT NOT NULL,
+            synopsis TEXT NOT NULL,
+            genres TEXT NOT NULL,
+            created_at TEXT NOT NULL
+          )
+        ''');
       },
     );
+    await _migrateSchema(_db!);
+    await _ensureAdminAccount();
     return _db!;
+  }
+
+  Future<void> _migrateSchema(Database db) async {
+    await _safeAlter(db, 'ALTER TABLE users ADD COLUMN username TEXT NOT NULL DEFAULT "Otaku User"');
+    await _safeAlter(db, 'ALTER TABLE users ADD COLUMN profile_image_path TEXT');
+    await _safeAlter(db, 'ALTER TABLE users ADD COLUMN is_blocked INTEGER NOT NULL DEFAULT 0');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS custom_anime(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        image_url TEXT NOT NULL,
+        synopsis TEXT NOT NULL,
+        genres TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _safeAlter(Database db, String sql) async {
+    try {
+      await db.execute(sql);
+    } catch (_) {}
+  }
+
+  Future<void> _ensureAdminAccount() async {
+    final db = _db!;
+    final rows = await db.query('users', where: 'email = ?', whereArgs: ['admin@gmail.com'], limit: 1);
+    if (rows.isNotEmpty) return;
+    await db.insert('users', {
+      'username': 'System Admin',
+      'email': 'admin@gmail.com',
+      'password_hash': _hashPassword('7264'),
+      'role': 'admin',
+      'created_at': DateTime.now().toIso8601String(),
+      'is_blocked': 0,
+    });
   }
 
   String _hashPassword(String password) {
@@ -58,17 +109,20 @@ class LocalDatabaseService {
   }
 
   Future<AppUser> registerUser({
+    required String username,
     required String email,
     required String password,
   }) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
     final normalizedEmail = email.trim().toLowerCase();
-    final role = normalizedEmail == 'admin@anirec.com' ? 'admin' : 'user';
+    final role = normalizedEmail == 'admin@gmail.com' && password == '7264' ? 'admin' : 'user';
     final id = await db.insert('users', {
+      'username': username.trim().isEmpty ? 'Otaku User' : username.trim(),
       'email': normalizedEmail,
       'password_hash': _hashPassword(password),
       'role': role,
+      'is_blocked': 0,
       'created_at': now,
     });
     final user = AppUser(
@@ -95,6 +149,7 @@ class LocalDatabaseService {
     );
     if (rows.isEmpty) return null;
     final user = _rowToUser(rows.first);
+    if (user.isBlocked) return null;
     await setActiveUserId(user.id);
     return user;
   }
@@ -192,11 +247,118 @@ class LocalDatabaseService {
     );
   }
 
+  Future<void> updateUserProfile({
+    required int userId,
+    required String username,
+    required String email,
+    String? password,
+    String? profileImagePath,
+  }) async {
+    final db = await database;
+    final payload = <String, Object?>{
+      'username': username.trim().isEmpty ? 'Otaku User' : username.trim(),
+      'email': email.trim().toLowerCase(),
+      'profile_image_path': profileImagePath,
+    };
+    if (password != null && password.trim().isNotEmpty) {
+      payload['password_hash'] = _hashPassword(password.trim());
+    }
+    await db.update('users', payload, where: 'id = ?', whereArgs: [userId]);
+  }
+
+  Future<List<Map<String, Object?>>> adminUsersWithHashes({int limit = 100}) async {
+    final db = await database;
+    return db.query('users', orderBy: 'id DESC', limit: limit);
+  }
+
+  Future<void> blockUser(int userId, bool blocked) async {
+    final db = await database;
+    await db.update('users', {'is_blocked': blocked ? 1 : 0}, where: 'id = ?', whereArgs: [userId]);
+    if (blocked) {
+      final active = await getActiveUser();
+      if (active?.id == userId) {
+        await setActiveUserId(null);
+      }
+    }
+  }
+
+  Future<void> deleteUser(int userId) async {
+    final db = await database;
+    await db.delete('user_watchlist', where: 'user_id = ?', whereArgs: [userId]);
+    await db.delete('search_logs', where: 'user_id = ?', whereArgs: [userId]);
+    await db.delete('users', where: 'id = ?', whereArgs: [userId]);
+    final active = await getActiveUser();
+    if (active?.id == userId) {
+      await setActiveUserId(null);
+    }
+  }
+
+  Future<AppUser> adminCreateUser({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final id = await db.insert('users', {
+      'username': username.trim().isEmpty ? 'Otaku User' : username.trim(),
+      'email': email.trim().toLowerCase(),
+      'password_hash': _hashPassword(password.trim()),
+      'role': 'user',
+      'is_blocked': 0,
+      'created_at': now,
+    });
+    return AppUser(
+      id: id,
+      username: username,
+      email: email.trim().toLowerCase(),
+      role: 'user',
+      isBlocked: false,
+      createdAt: DateTime.parse(now),
+    );
+  }
+
+  Future<void> addCustomAnime({
+    required String title,
+    required String imageUrl,
+    required String synopsis,
+    required String genres,
+  }) async {
+    final db = await database;
+    await db.insert('custom_anime', {
+      'title': title.trim(),
+      'image_url': imageUrl.trim(),
+      'synopsis': synopsis.trim(),
+      'genres': genres.trim(),
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<void> removeCustomAnime(int id) async {
+    final db = await database;
+    await db.delete('custom_anime', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, Object?>>> listCustomAnime() async {
+    final db = await database;
+    return db.query('custom_anime', orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, Object?>>> topSearches({int limit = 8}) async {
+    final db = await database;
+    return db.rawQuery(
+      'SELECT query, COUNT(*) as c FROM search_logs GROUP BY query ORDER BY c DESC LIMIT $limit',
+    );
+  }
+
   AppUser _rowToUser(Map<String, Object?> row) {
     return AppUser(
       id: row['id'] as int,
+      username: (row['username'] ?? 'Otaku User').toString(),
       email: row['email'] as String,
       role: row['role'] as String,
+      profileImagePath: row['profile_image_path']?.toString(),
+      isBlocked: ((row['is_blocked'] ?? 0) as int) == 1,
       createdAt: DateTime.parse(row['created_at'] as String),
     );
   }

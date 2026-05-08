@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import 'admin_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -33,7 +34,13 @@ class _AuthScreenState extends State<AuthScreen> {
       ok = await state.login(email: email, password: password);
     }
     if (!mounted) return;
-    if (ok) Navigator.pop(context, true);
+    if (ok) {
+      if (state.currentUser?.isAdmin == true) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminScreen()));
+      } else {
+        Navigator.pop(context, true);
+      }
+    }
   }
 
   Future<void> _forgot(BuildContext context) async {
