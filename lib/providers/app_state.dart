@@ -345,9 +345,22 @@ class AppState extends ChangeNotifier {
     required String synopsis,
     required String genres,
   }) async {
+    final cleanTitle = title.trim();
+    var cleanImage = imageUrl.trim();
+    if (cleanImage.isEmpty && cleanTitle.isNotEmpty) {
+      try {
+        final results = await api.searchAnime(cleanTitle, limit: 1);
+        if (results.isNotEmpty) {
+          cleanImage = results.first.imageUrl;
+        }
+      } catch (_) {}
+    }
+    if (cleanImage.isEmpty) {
+      cleanImage = 'https://placehold.co/300x450?text=No+Image';
+    }
     await db.addCustomAnime(
-      title: title,
-      imageUrl: imageUrl,
+      title: cleanTitle.isEmpty ? 'Custom Anime' : cleanTitle,
+      imageUrl: cleanImage,
       synopsis: synopsis,
       genres: genres,
     );
