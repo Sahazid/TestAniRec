@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/anime.dart';
 import '../providers/app_state.dart';
 import 'auth_screen.dart';
@@ -115,14 +114,6 @@ class DetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _open(anime.trailerUrl ?? anime.malUrl),
-                      icon: const Icon(Icons.open_in_new_rounded),
-                      label: const Text('Open Source / Trailer'),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -130,11 +121,6 @@ class DetailScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _open(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _toggleWatchlist(BuildContext context, AppState state) async {
