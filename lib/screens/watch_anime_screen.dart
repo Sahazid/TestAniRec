@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../models/anime.dart';
@@ -20,6 +21,7 @@ class _WatchAnimeScreenState extends State<WatchAnimeScreen> {
   VideoPlayerController? _video;
   bool _playerLoading = false;
   double _playbackSpeed = 1.0;
+  String? _playerError;
 
   @override
   void initState() {
@@ -28,32 +30,50 @@ class _WatchAnimeScreenState extends State<WatchAnimeScreen> {
   }
 
   Future<void> _load() async {
-    episodes = await _api.animeEpisodes(widget.anime.id);
-    if (episodes.isNotEmpty) {
-      await _playEpisode(0);
+    try {
+      episodes = await _api.animeEpisodes(widget.anime.id);
+      if (episodes.isNotEmpty) {
+        await _playEpisode(0);
+      } else {
+        _playerError = 'No episodes found for this anime.';
+      }
+    } catch (_) {
+      _playerError = 'Failed to load episodes. Please try again.';
+    } finally {
+      if (!mounted) return;
+      setState(() => loading = false);
     }
-    if (!mounted) return;
-    setState(() => loading = false);
   }
 
   Future<void> _playEpisode(int index) async {
     if (index < 0 || index >= episodes.length) return;
     final ep = episodes[index];
     final streamUrl = ep.streamUrl;
-    if (streamUrl == null || streamUrl.isEmpty) return;
+    if (streamUrl == null || streamUrl.isEmpty) {
+      setState(() => _playerError = 'No stream URL found for this episode.');
+      return;
+    }
     setState(() {
       selectedEpisode = index;
       _playerLoading = true;
+      _playerError = null;
     });
-    await _video?.dispose();
-    final controller = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
-    _video = controller;
-    await controller.initialize();
-    await controller.setLooping(false);
-    await controller.setPlaybackSpeed(_playbackSpeed);
-    await controller.play();
-    if (!mounted) return;
-    setState(() => _playerLoading = false);
+    try {
+      await _video?.dispose();
+      final controller = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
+      _video = controller;
+      await controller.initialize().timeout(const Duration(seconds: 20));
+      await controller.setLooping(false);
+      await controller.setPlaybackSpeed(_playbackSpeed);
+      await controller.play();
+    } on TimeoutException {
+      _playerError = 'Video loading timed out. Check connection and retry.';
+    } catch (_) {
+      _playerError = 'Unable to play this episode right now.';
+    } finally {
+      if (!mounted) return;
+      setState(() => _playerLoading = false);
+    }
   }
 
   Future<void> _setSpeed(double speed) async {
@@ -87,9 +107,20 @@ class _WatchAnimeScreenState extends State<WatchAnimeScreen> {
                     borderRadius: BorderRadius.circular(18),
                     child: ColoredBox(
                       color: Colors.black,
-                      child: _playerLoading || _video == null || !_video!.value.isInitialized
+                      child: _playerLoading
                           ? const Center(child: CircularProgressIndicator())
-                          : VideoPlayer(_video!),
+                          : (_video == null || !_video!.value.isInitialized)
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Text(
+                                      _playerError ?? 'Player is not ready.',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Colors.white70),
+                                    ),
+                                  ),
+                                )
+                              : VideoPlayer(_video!),
                     ),
                   ),
                 ),
